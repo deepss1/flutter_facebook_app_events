@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as dev;
+import 'dart:io';
 
 import 'package:flutter/services.dart';
 
@@ -48,6 +50,27 @@ class FacebookAppEvents {
   /// Clears the current user data
   Future<void> clearUserData() {
     return _channel.invokeMethod<void>('clearUserData');
+  }
+
+  /// Get deep link from Facebook App Links
+  /// Empty String when null
+  ///
+  /// Currently only available on iOS
+  /// Empty String for Android
+  Future<String> getDeepLink() async {
+    if (Platform.isAndroid) {
+      return '';
+    }
+    try {
+      dynamic data = await _channel.invokeMethod('getDeepLinkUrl');
+      return data?.toString() ?? '';
+    } catch (e) {
+      dev.log(
+        "Error retrieving Facebook App Link: $e",
+        name: 'FacebookAppEvents',
+      );
+    }
+    return '';
   }
 
   /// Sets user data to associate with all app events.

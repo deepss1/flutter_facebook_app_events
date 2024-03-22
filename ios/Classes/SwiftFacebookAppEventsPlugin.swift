@@ -5,6 +5,9 @@ import FBSDKCoreKit_Basics
 import FBAudienceNetwork
 
 public class SwiftFacebookAppEventsPlugin: NSObject, FlutterPlugin {
+
+    var deepLinkUrl:String = ""
+
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "flutter.oddbit.id/facebook_app_events", binaryMessenger: registrar.messenger())
         let instance = SwiftFacebookAppEventsPlugin()
@@ -26,10 +29,21 @@ public class SwiftFacebookAppEventsPlugin: NSObject, FlutterPlugin {
             options[key] = value
         }
         ApplicationDelegate.shared.application(application,didFinishLaunchingWithOptions: options)
+
+        AppLinkUtility.fetchDeferredAppLink{ (url, error) in
+            if let error = error{
+                print("Error %a", error)
+            }
+            if let url = url {
+                self.deepLinkUrl = url.absoluteString
+            }
+        }
+
         return true
     }
     
     public func application( _ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:] ) -> Bool {
+        self.deepLinkUrl = url.absoluteString
         let processed = ApplicationDelegate.shared.application(
             app, open: url,
             sourceApplication: options[UIApplication.OpenURLOptionsKey.sourceApplication] as? String,
@@ -77,6 +91,9 @@ public class SwiftFacebookAppEventsPlugin: NSObject, FlutterPlugin {
             break
         case "setAdvertiserTracking":
             handleSetAdvertiserTracking(call, result: result)
+            break
+        case "getDeepLinkUrl":
+            result(deepLinkUrl)
             break
         default:
             result(FlutterMethodNotImplemented)
@@ -185,7 +202,9 @@ public class SwiftFacebookAppEventsPlugin: NSObject, FlutterPlugin {
         let arguments = call.arguments as? [String: Any] ?? [String: Any]()
         let enabled = arguments["enabled"] as! Bool
         let collectId = arguments["collectId"] as! Bool
-        FBAdSettings.setAdvertiserTrackingEnabled(enabled)
+        if #available(iOS 12.0, *) {
+            FBAdSettings.setAdvertiserTrackingEnabled(enabled)
+        }
         Settings.shared.isAdvertiserTrackingEnabled = enabled
         Settings.shared.isAdvertiserIDCollectionEnabled = collectId
         result(nil)
